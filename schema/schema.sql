@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS admins (
   username TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   email TEXT,
+  role TEXT DEFAULT 'admin', -- super_admin, admin
   last_login DATETIME,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -49,10 +50,11 @@ CREATE INDEX IF NOT EXISTS idx_products_featured ON products(is_featured);
 CREATE INDEX IF NOT EXISTS idx_inquiries_status ON inquiries(status);
 CREATE INDEX IF NOT EXISTS idx_inquiries_product ON inquiries(product_id);
 
--- Insert default admin account (username: admin, password: admin123)
--- Password is hashed using SHA-256
-INSERT OR IGNORE INTO admins (username, password_hash, email)
-VALUES ('admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'admin@example.com');
+
+INSERT OR IGNORE INTO admins (username, password_hash, email, role)
+VALUES
+('admin123', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'admin@example.com', 'admin'),
+('staff', '10176e7b7b24d317acfcf8d2064cfd2f24e154f7b5a96603077d5ef813d6a6b6', 'staff@example.com', 'admin');
 
 -- Insert sample products
 INSERT OR IGNORE INTO products (id, name, description, detailed_description, specifications, image_url, category, is_featured)

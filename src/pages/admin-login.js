@@ -50,7 +50,7 @@ export async function adminLoginPage(env) {
 
           <div style="margin-top: 1.5rem; text-align: center;">
             <p style="color: var(--text-light); font-size: 0.9rem;">
-              Default credentials: admin / admin123
+              Default credentials: admin123 / admin123
             </p>
             <a href="/" style="color: var(--primary-color); text-decoration: none; font-size: 0.9rem;">
               ← Back to Website
@@ -99,8 +99,9 @@ export async function adminLoginPage(env) {
           });
 
           if (response.success) {
-            // Store token
+            // Store token and user role
             localStorage.setItem('admin_token', response.data.token);
+            localStorage.setItem('admin_role', response.data.user.role || 'admin');
 
             // Show success message
             showNotification('Login successful! Redirecting...', 'success');

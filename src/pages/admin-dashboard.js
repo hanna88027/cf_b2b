@@ -432,7 +432,10 @@ export async function adminDashboard(env) {
       <div class="admin-header">
         <div>
           <h1 style="font-size: 1.5rem; margin-bottom: 0.25rem;">Dashboard</h1>
-          <p style="color: var(--text-light); font-size: 0.9rem;">Welcome back, <span id="admin-username">Admin</span></p>
+          <p style="color: var(--text-light); font-size: 0.9rem;">
+            Welcome back, <span id="admin-username">Admin</span>
+            <span id="admin-role-indicator" style="margin-left: 0.5rem; padding: 0.25rem 0.5rem; background: var(--primary-color); color: white; border-radius: 0.25rem; font-size: 0.75rem;">Loading...</span>
+          </p>
         </div>
         <div style="display: flex; gap: 1rem;">
           <a href="/" target="_blank" class="btn btn-primary" style="text-decoration: none; display: flex; align-items: center; ">
@@ -560,7 +563,7 @@ export async function adminDashboard(env) {
             </div>
 
             <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
-              <button type="submit" class="btn btn-primary" style="margin-right: 1rem;">Save Settings</button>
+              <button type="submit" id="save-settings-btn" class="btn btn-primary" style="margin-right: 1rem;">Save Settings</button>
               <button type="button" class="btn btn-secondary" onclick="loadSettings()">Reset</button>
             </div>
           </form>
@@ -799,14 +802,30 @@ export async function adminDashboard(env) {
 
     // Check authentication
     const token = localStorage.getItem('admin_token');
+    const userRole = localStorage.getItem('admin_role') || 'admin';
+    const isSuperAdmin = userRole === 'super_admin';
+
     if (!token) {
       window.location.href = '/admin/login';
     }
 
-    // Verify token on page load
+    // Verify token on page load and get user info
     API.post('/admin/verify', { token })
+      .then(response => {
+        if (response.success && response.data.user) {
+          // Update role in localStorage
+          localStorage.setItem('admin_role', response.data.user.role || 'admin');
+
+          // Update role indicator
+          const roleIndicator = document.getElementById('admin-role-indicator');
+          if (roleIndicator) {
+            roleIndicator.textContent = response.data.user.role === 'super_admin' ? 'Super Admin' : 'Admin';
+          }
+        }
+      })
       .catch(() => {
         localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_role');
         window.location.href = '/admin/login';
       });
 
@@ -858,6 +877,7 @@ export async function adminDashboard(env) {
     // Logout functionality
     function logout() {
       localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_role');
       window.location.href = '/admin/login';
     }
 
@@ -949,7 +969,7 @@ export async function adminDashboard(env) {
                   <th>Category</th>
                   <th>Featured</th>
                   <th>Status</th>
-                  <th>Actions</th>
+                  \${isSuperAdmin ? '<th>Actions</th>' : ''}
                 </tr>
               </thead>
               <tbody>
@@ -960,10 +980,12 @@ export async function adminDashboard(env) {
                     <td>\${product.category || 'N/A'}</td>
                     <td>\${product.is_featured ? '⭐ Yes' : 'No'}</td>
                     <td><span class="badge \${product.is_active ? 'badge-completed' : 'badge-pending'}">\${product.is_active ? 'Active' : 'Inactive'}</span></td>
+                    \${isSuperAdmin ? \`
                     <td>
                       <button onclick="editProduct(\${product.id})" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem; margin-right: 0.5rem;">Edit</button>
                       <button onclick="deleteProduct(\${product.id})" class="btn" style="background: #dc2626; color: white; padding: 0.5rem 1rem; font-size: 0.85rem;">Delete</button>
                     </td>
+                    \` : ''}
                   </tr>
                 \`).join('')}
               </tbody>
@@ -1013,7 +1035,7 @@ export async function adminDashboard(env) {
                     <td>\${new Date(inquiry.created_at).toLocaleDateString()}</td>
                     <td>
                       <button onclick="viewInquiry(\${inquiry.id})" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem; margin-right: 0.5rem;">View</button>
-                      <button onclick="deleteInquiry(\${inquiry.id})" class="btn" style="background: #dc2626; color: white; padding: 0.5rem 1rem; font-size: 0.85rem;">Delete</button>
+                      \${isSuperAdmin ? \`<button onclick="deleteInquiry(\${inquiry.id})" class="btn" style="background: #dc2626; color: white; padding: 0.5rem 1rem; font-size: 0.85rem;">Delete</button>\` : ''}
                     </td>
                   </tr>
                 \`).join('')}
@@ -1208,6 +1230,14 @@ export async function adminDashboard(env) {
       openAddProductModal();
     });
 
+    // Hide add product button for non-super admins
+    if (!isSuperAdmin) {
+      const addProductBtn = document.getElementById('add-product-btn');
+      if (addProductBtn) {
+        addProductBtn.style.display = 'none';
+      }
+    }
+
     // Inquiry Management Functions
     window.viewInquiry = async function(id) {
       try {
@@ -1275,9 +1305,36 @@ Date: \${new Date(inquiry.created_at).toLocaleString()}
 
     window.loadSettings = loadSettings;
 
+    // Disable settings save for non-super admins
+    if (!isSuperAdmin) {
+      const saveSettingsBtn = document.getElementById('save-settings-btn');
+      if (saveSettingsBtn) {
+        saveSettingsBtn.disabled = true;
+        saveSettingsBtn.textContent = 'Save Settings (Super Admin Only)';
+        saveSettingsBtn.style.opacity = '0.5';
+        saveSettingsBtn.style.cursor = 'not-allowed';
+      }
+
+      // Make all settings form fields readonly for non-super admins
+      const settingsForm = document.getElementById('settings-form');
+      if (settingsForm) {
+        const inputs = settingsForm.querySelectorAll('input, textarea');
+        inputs.forEach(input => {
+          input.readOnly = true;
+          input.style.backgroundColor = '#f3f4f6';
+        });
+      }
+    }
+
     // Handle settings form submission
     document.getElementById('settings-form').addEventListener('submit', async function(e) {
       e.preventDefault();
+
+      // Check if user is super admin
+      if (!isSuperAdmin) {
+        showNotification('Only super admin can save settings', 'error');
+        return;
+      }
 
       const formData = {
         site_name: document.getElementById('settings-site-name').value,

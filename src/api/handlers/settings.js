@@ -3,6 +3,8 @@
  * Handles website settings stored in Cloudflare KV
  */
 
+import { requireSuperAdmin } from './admin';
+
 const SETTINGS_KEY = 'website_settings';
 
 export async function handleSettings(request, env, corsHeaders) {
@@ -14,7 +16,7 @@ export async function handleSettings(request, env, corsHeaders) {
     return getSettings(env, corsHeaders);
   }
 
-  // POST /api/settings - Update settings (Admin only)
+  // POST /api/settings - Update settings (Super Admin only)
   if (method === 'POST') {
     return updateSettings(request, env, corsHeaders);
   }
@@ -60,10 +62,19 @@ async function getSettings(env, corsHeaders) {
   }
 }
 
-// Update settings in KV
+// Update settings in KV (Super Admin only)
 async function updateSettings(request, env, corsHeaders) {
   try {
-    // TODO: Add authentication check for admin only
+    // Check if user is super admin
+    const admin = await requireSuperAdmin(request, env);
+    if (!admin) {
+      return new Response(JSON.stringify({
+        error: 'Unauthorized. Super admin access required.'
+      }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const data = await request.json();
 

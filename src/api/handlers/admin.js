@@ -86,6 +86,7 @@ async function adminLogin(request, env, corsHeaders) {
     const token = await generateToken({
       id: admin.id,
       username: admin.username,
+      role: admin.role,
       exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
     }, JWT_SECRET);
 
@@ -98,6 +99,7 @@ async function adminLogin(request, env, corsHeaders) {
           id: admin.id,
           username: admin.username,
           email: admin.email,
+          role: admin.role,
         },
       },
     }), {
@@ -138,7 +140,7 @@ async function verifyAdminToken(request, env, corsHeaders) {
 
     // Get admin user
     const admin = await env.DB.prepare(
-      'SELECT id, username, email FROM admins WHERE id = ?'
+      'SELECT id, username, email, role FROM admins WHERE id = ?'
     ).bind(payload.id).first();
 
     if (!admin) {
@@ -224,7 +226,7 @@ async function getDashboardStats(request, env, corsHeaders) {
 }
 
 // Helper function to check authentication
-export async function requireAuth(request) {
+export async function requireAuth(request, env) {
   const authHeader = request.headers.get('Authorization');
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -234,5 +236,25 @@ export async function requireAuth(request) {
   const token = authHeader.substring(7);
   const payload = await verifyToken(token, JWT_SECRET);
 
-  return payload;
+  if (!payload) {
+    return null;
+  }
+
+  // Get admin with role
+  const admin = await env.DB.prepare(
+    'SELECT id, username, email, role FROM admins WHERE id = ?'
+  ).bind(payload.id).first();
+
+  return admin;
+}
+
+// Helper function to check if user is super admin
+export async function requireSuperAdmin(request, env) {
+  const admin = await requireAuth(request, env);
+
+  if (!admin || admin.role !== 'super_admin') {
+    return null;
+  }
+
+  return admin;
 }

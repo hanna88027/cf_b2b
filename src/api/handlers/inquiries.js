@@ -3,6 +3,8 @@
  * Handles all inquiry-related API requests
  */
 
+import { requireSuperAdmin } from './admin';
+
 export async function handleInquiries(request, env, corsHeaders) {
   const url = new URL(request.url);
   const method = request.method;
@@ -30,10 +32,10 @@ export async function handleInquiries(request, env, corsHeaders) {
     return updateInquiryStatus(request, env, inquiryId, corsHeaders);
   }
 
-  // DELETE /api/inquiries/:id - Delete inquiry (Admin only)
+  // DELETE /api/inquiries/:id - Delete inquiry (Super Admin only)
   if (method === 'DELETE' && pathParts.length === 3) {
     const inquiryId = pathParts[2];
-    return deleteInquiry(env, inquiryId, corsHeaders);
+    return deleteInquiry(request, env, inquiryId, corsHeaders);
   }
 
   return new Response(JSON.stringify({ error: 'Not found' }), {
@@ -185,10 +187,19 @@ async function updateInquiryStatus(request, env, inquiryId, corsHeaders) {
   }
 }
 
-// Delete inquiry (Admin only)
-async function deleteInquiry(env, inquiryId, corsHeaders) {
+// Delete inquiry (Super Admin only)
+async function deleteInquiry(request, env, inquiryId, corsHeaders) {
   try {
-    // TODO: Add authentication check
+    // Check if user is super admin
+    const admin = await requireSuperAdmin(request, env);
+    if (!admin) {
+      return new Response(JSON.stringify({
+        error: 'Unauthorized. Super admin access required.'
+      }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     await env.DB.prepare(
       'DELETE FROM inquiries WHERE id = ?'

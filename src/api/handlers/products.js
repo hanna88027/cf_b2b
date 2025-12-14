@@ -3,6 +3,8 @@
  * Handles all product-related API requests
  */
 
+import { requireSuperAdmin } from './admin';
+
 export async function handleProducts(request, env, corsHeaders) {
   const url = new URL(request.url);
   const method = request.method;
@@ -128,10 +130,20 @@ async function getProduct(env, productId, corsHeaders, request) {
   }
 }
 
-// Create new product (Admin only)
+// Create new product (Super Admin only)
 async function createProduct(request, env, corsHeaders) {
   try {
-    // TODO: Add authentication check
+    // Check if user is super admin
+    const admin = await requireSuperAdmin(request, env);
+    if (!admin) {
+      return new Response(JSON.stringify({
+        error: 'Unauthorized. Super admin access required.'
+      }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const data = await request.json();
 
     const result = await env.DB.prepare(
@@ -164,10 +176,20 @@ async function createProduct(request, env, corsHeaders) {
   }
 }
 
-// Update product (Admin only)
+// Update product (Super Admin only)
 async function updateProduct(request, env, productId, corsHeaders) {
   try {
-    // TODO: Add authentication check
+    // Check if user is super admin
+    const admin = await requireSuperAdmin(request, env);
+    if (!admin) {
+      return new Response(JSON.stringify({
+        error: 'Unauthorized. Super admin access required.'
+      }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const data = await request.json();
 
     await env.DB.prepare(
@@ -207,10 +229,20 @@ async function updateProduct(request, env, productId, corsHeaders) {
   }
 }
 
-// Delete product (Admin only - soft delete)
+// Delete product (Super Admin only - soft delete)
 async function deleteProduct(request, env, productId, corsHeaders) {
   try {
-    // TODO: Add authentication check
+    // Check if user is super admin
+    const admin = await requireSuperAdmin(request, env);
+    if (!admin) {
+      return new Response(JSON.stringify({
+        error: 'Unauthorized. Super admin access required.'
+      }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     await env.DB.prepare(
       'UPDATE products SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
     ).bind(productId).run();
