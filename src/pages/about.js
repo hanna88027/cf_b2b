@@ -6,6 +6,18 @@
 import { createLayout } from './layout';
 
 export async function aboutPage(env) {
+  // Load settings from KV for SEO
+  let siteName = 'B2B Product Exhibition';
+  try {
+    const settingsJson = await env.STATIC_ASSETS.get('website_settings');
+    if (settingsJson) {
+      const settings = JSON.parse(settingsJson);
+      siteName = settings.site_name || siteName;
+    }
+  } catch (error) {
+    console.error('Error loading settings for SEO:', error);
+  }
+
   const content = `
     <!-- Page Header -->
     <section class="hero" style="padding: 3rem 2rem;">
@@ -91,6 +103,16 @@ export async function aboutPage(env) {
             <p class="card-description">
               Our customers are at the heart of everything we do. We build long-term
               partnerships based on trust and mutual success.
+            </p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-content" style="text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🌱</div>
+            <h3 class="card-title">Sustainability</h3>
+            <p class="card-description">
+              We are committed to sustainable practices and environmental responsibility.
+              Our operations prioritize eco-friendly processes and long-term environmental stewardship.
             </p>
           </div>
         </div>
@@ -186,7 +208,13 @@ export async function aboutPage(env) {
     </script>
   `;
 
-  const html = createLayout('About Us', content, scripts);
+  const html = createLayout(
+    `About Us - ${siteName}`,
+    content,
+    scripts,
+    `Learn more about our journey, values, and commitment to excellence - ${siteName}`,
+    false
+  );
 
   return new Response(html, {
     headers: {

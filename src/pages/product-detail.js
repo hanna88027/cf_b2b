@@ -9,6 +9,24 @@ export async function productDetailPage(request, env) {
   const url = new URL(request.url);
   const productId = url.pathname.split('/').pop();
 
+  // Load product info from database for SEO
+  let pageTitle = 'Product Details';
+  let metaDescription = 'View detailed product information';
+
+  try {
+    const product = await env.DB.prepare('SELECT * FROM products WHERE id = ?').bind(productId).first();
+    if (product) {
+      pageTitle = product.name;
+      metaDescription = product.description || product.detailed_description || `${product.name} - High-quality product`;
+      // Limit meta description to 160 characters for SEO
+      if (metaDescription.length > 160) {
+        metaDescription = metaDescription.substring(0, 157) + '...';
+      }
+    }
+  } catch (error) {
+    console.error('Error loading product for SEO:', error);
+  }
+
   const content = `
     <!-- Product Detail Container -->
     <div id="product-detail" class="container" style="margin-top: 2rem; margin-bottom: 3rem;">
@@ -67,12 +85,21 @@ export async function productDetailPage(request, env) {
 
   const scripts = `
     <script>
-      const productId = ${productId};
+      const productId = "${productId}";
 
       // Load product details
       async function loadProductDetail() {
         try {
+          console.log('Loading product with ID:', productId);
           const response = await API.get(\`/products/\${productId}\`);
+          console.log('API response:', response);
+
+          if (!response || !response.success) {
+            document.getElementById('product-detail').innerHTML =
+              '<p style="text-align: center; color: var(--text-light);">Failed to load product. Response: ' + JSON.stringify(response) + '</p>';
+            return;
+          }
+
           const product = response.data;
 
           if (!product) {
@@ -80,6 +107,8 @@ export async function productDetailPage(request, env) {
               '<p style="text-align: center; color: var(--text-light);">Product not found.</p>';
             return;
           }
+
+          console.log('Product loaded successfully:', product);
 
           document.getElementById('product-detail').innerHTML = \`
             <!-- Breadcrumb -->
@@ -95,8 +124,9 @@ export async function productDetailPage(request, env) {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; margin-bottom: 3rem;">
               <!-- Product Images -->
               <div>
-                <img src="\${product.image_url || '/images/placeholder.jpg'}" alt="\${product.name}"
-                  style="width: 100%; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <img src="\${product.image_url || 'https://via.placeholder.com/600x400?text=No+Image'}" alt="\${product.name}"
+                  style="width: 100%; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"
+                  onerror="this.src='https://via.placeholder.com/600x400?text=Image+Not+Found'">
               </div>
 
               <!-- Product Info -->
@@ -200,19 +230,25 @@ export async function productDetailPage(request, env) {
       loadProductDetail();
 
       // Add responsive styles
-      const style = document.createElement('style');
-      style.textContent = \`
+      const responsiveStyle = document.createElement('style');
+      responsiveStyle.textContent = \`
         @media (max-width: 768px) {
           #product-detail > div:nth-child(2) {
             grid-template-columns: 1fr !important;
           }
         }
       \`;
-      document.head.appendChild(style);
+      document.head.appendChild(responsiveStyle);
     </script>
   `;
 
-  const html = createLayout('Product Details', content, scripts);
+  const html = createLayout(
+    pageTitle,
+    content,
+    scripts,
+    metaDescription,
+    false // Don't use title suffix for product pages, use product name only
+  );
 
   return new Response(html, {
     headers: {

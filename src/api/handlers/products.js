@@ -10,7 +10,7 @@ export async function handleProducts(request, env, corsHeaders) {
 
   // GET /api/products - Get all products
   if (method === 'GET' && pathParts.length === 2) {
-    return getAllProducts(env, corsHeaders);
+    return getAllProducts(env, corsHeaders, request);
   }
 
   // GET /api/products/featured - Get featured products
@@ -21,7 +21,7 @@ export async function handleProducts(request, env, corsHeaders) {
   // GET /api/products/:id - Get single product
   if (method === 'GET' && pathParts.length === 3) {
     const productId = pathParts[2];
-    return getProduct(env, productId, corsHeaders);
+    return getProduct(env, productId, corsHeaders, request);
   }
 
   // POST /api/products - Create new product (Admin only)
@@ -48,11 +48,21 @@ export async function handleProducts(request, env, corsHeaders) {
 }
 
 // Get all products
-async function getAllProducts(env, corsHeaders) {
+async function getAllProducts(env, corsHeaders, request) {
   try {
-    const { results } = await env.DB.prepare(
-      'SELECT * FROM products WHERE is_active = 1 ORDER BY created_at DESC'
-    ).all();
+    // Check if this is an authenticated admin request
+    const authHeader = request?.headers?.get('Authorization');
+    const isAdmin = authHeader && authHeader.startsWith('Bearer ');
+
+    // Admin can see all products, public can only see active ones
+    let query;
+    if (isAdmin) {
+      query = env.DB.prepare('SELECT * FROM products ORDER BY created_at DESC');
+    } else {
+      query = env.DB.prepare('SELECT * FROM products WHERE is_active = 1 ORDER BY created_at DESC');
+    }
+
+    const { results } = await query.all();
 
     return new Response(JSON.stringify({ success: true, data: results }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -84,11 +94,21 @@ async function getFeaturedProducts(env, corsHeaders) {
 }
 
 // Get single product
-async function getProduct(env, productId, corsHeaders) {
+async function getProduct(env, productId, corsHeaders, request) {
   try {
-    const product = await env.DB.prepare(
-      'SELECT * FROM products WHERE id = ? AND is_active = 1'
-    ).bind(productId).first();
+    // Check if this is an authenticated admin request
+    const authHeader = request?.headers?.get('Authorization');
+    const isAdmin = authHeader && authHeader.startsWith('Bearer ');
+
+    // Admin can see all products, public can only see active ones
+    let query;
+    if (isAdmin) {
+      query = env.DB.prepare('SELECT * FROM products WHERE id = ?');
+    } else {
+      query = env.DB.prepare('SELECT * FROM products WHERE id = ? AND is_active = 1');
+    }
+
+    const product = await query.bind(productId).first();
 
     if (!product) {
       return new Response(JSON.stringify({ error: 'Product not found' }), {

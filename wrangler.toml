@@ -11,3 +11,12 @@ database_id = "8755429a-7eb4-4dac-8aa4-55e4b58b2f63"
 # Environment variables
 [vars]
 ENVIRONMENT = "development"
+
+# R2 Storage for images
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "b2b-product-images"
+
+[[kv_namespaces]]
+binding = "STATIC_ASSETS" #
+id = "f665b3c2520b4900bc27aef4c8a9d82d" # 从 Cloudflare 获取的 KV Namespace ID

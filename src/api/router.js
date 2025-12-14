@@ -20,6 +20,18 @@ export async function handleApiRequest(request, env) {
   }
 
   try {
+    // Settings API
+    if (path.startsWith('/api/settings')) {
+      const { handleSettings } = await import('./handlers/settings');
+      return handleSettings(request, env, corsHeaders);
+    }
+
+    // Upload API
+    if (path.startsWith('/api/upload')) {
+      const { handleUpload } = await import('./handlers/upload');
+      return handleUpload(request, env, corsHeaders);
+    }
+
     // Products API
     if (path.startsWith('/api/products')) {
       const { handleProducts } = await import('./handlers/products');

@@ -13,13 +13,15 @@
 ### ✅ 后台管理系统
 1. **管理员登录** - 安全认证（默认账号：admin/admin123）
 2. **Dashboard** - 统计数据概览
-3. **产品管理** - 产品列表、编辑、删除功能
-4. **询盘管理** - 查看、处理、删除询盘
+3. **产品管理** - 产品列表、编辑、删除、添加功能
+4. **产品图片上传** - 支持上传图片到 Cloudflare R2
+5. **询盘管理** - 查看、处理、删除询盘
 
 ### ✅ 后端 API
 1. **产品 API** - GET/POST/PUT/DELETE 完整 CRUD
 2. **询盘 API** - 提交询盘、查询、状态更新
 3. **管理员 API** - 登录认证、Token 验证
+4. **图片上传 API** - 支持上传图片到 R2 存储
 
 ### ✅ 数据库设计
 - Products 表 - 产品信息
@@ -54,14 +56,29 @@ database_name = "b2b_database"
 database_id = "你的-database-id"  # 替换这里
 \`\`\`
 
-### 4. 初始化数据库
+### 4. 创建 R2 存储桶（用于图片上传）
+
+```bash
+# 创建 R2 bucket
+wrangler r2 bucket create b2b-product-images
+```
+
+确认 `wrangler.toml` 中已配置 R2：
+
+```toml
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "b2b-product-images"
+```
+
+### 5. 初始化数据库
 
 \`\`\`bash
 # 执行数据库 schema
 wrangler d1 execute b2b_database --file=./schema/schema.sql
 \`\`\`
 
-### 5. 本地开发测试
+### 6. 本地开发测试
 
 \`\`\`bash
 npm run dev
@@ -69,7 +86,7 @@ npm run dev
 
 访问 http://localhost:8787 测试网站功能
 
-### 6. 部署到 Cloudflare
+### 7. 部署到 Cloudflare
 
 \`\`\`bash
 npm run deploy
@@ -84,12 +101,12 @@ npm run deploy
 **方案1：使用 Cloudflare KV 存储**
 \`\`\`bash
 # 创建 KV 命名空间
-wrangler kv:namespace create "STATIC_ASSETS"
+wrangler kv namespace create "STATIC_ASSETS"
 
 # 上传静态文件
-wrangler kv:key put --binding=STATIC_ASSETS "/css/main.css" ./public/css/main.css
-wrangler kv:key put --binding=STATIC_ASSETS "/js/main.js" ./public/js/main.js
-wrangler kv:key put --binding=STATIC_ASSETS "/js/admin.js" ./public/js/admin.js
+wrangler kv key put --binding=STATIC_ASSETS "/css/main.css" ./public/css/main.css
+wrangler kv key put --binding=STATIC_ASSETS "/js/main.js" ./public/js/main.js
+wrangler kv key put --binding=STATIC_ASSETS "/js/admin.js" ./public/js/admin.js
 \`\`\`
 
 **方案2：使用 Cloudflare R2 存储**
@@ -144,6 +161,7 @@ wrangler kv:key put --binding=STATIC_ASSETS "/js/admin.js" ./public/js/admin.js
 2. **管理产品**
    - 查看所有产品
    - 编辑产品信息
+   - 上传产品图片（支持 JPEG, PNG, GIF, WebP，最大 5MB）
    - 删除不需要的产品
    - 添加新产品
 
@@ -164,7 +182,8 @@ cf_b2b/
 │   │   └── handlers/         # API 处理器
 │   │       ├── products.js   # 产品 API
 │   │       ├── inquiries.js  # 询盘 API
-│   │       └── admin.js      # 管理员 API
+│   │       ├── admin.js      # 管理员 API
+│   │       └── upload.js     # 图片上传 API
 │   ├── pages/
 │   │   ├── router.js         # 页面路由
 │   │   ├── layout.js         # 页面布局
@@ -194,14 +213,14 @@ cf_b2b/
 
 ## 下一步优化建议
 
-1. ✨ 实现完整的产品编辑表单
-2. 📧 添加邮件通知功能（询盘提醒）
-3. 🖼️ 集成图片上传功能（使用 R2）
-4. 🔍 增强搜索功能（全文搜索）
-5. 📊 添加更多统计图表
-6. 🌐 多语言支持
-7. 💾 数据导出功能（Excel/CSV）
-8. 🔔 实时通知系统
+1. 📧 添加邮件通知功能（询盘提醒）
+2. 🔍 增强搜索功能（全文搜索）
+3. 📊 添加更多统计图表
+4. 🌐 多语言支持
+5. 💾 数据导出功能（Excel/CSV）
+6. 🔔 实时通知系统
+7. 🖼️ 图片编辑功能（裁剪、压缩）
+8. 📱 移动端管理后台优化
 
 ## 技术支持
 

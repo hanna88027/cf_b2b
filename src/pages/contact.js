@@ -6,6 +6,18 @@
 import { createLayout } from './layout';
 
 export async function contactPage(env) {
+  // Load settings from KV for SEO
+  let siteName = 'B2B Product Exhibition';
+  try {
+    const settingsJson = await env.STATIC_ASSETS.get('website_settings');
+    if (settingsJson) {
+      const settings = JSON.parse(settingsJson);
+      siteName = settings.site_name || siteName;
+    }
+  } catch (error) {
+    console.error('Error loading settings for SEO:', error);
+  }
+
   const content = `
     <!-- Page Header -->
     <section class="hero" style="padding: 3rem 2rem;">
@@ -31,7 +43,7 @@ export async function contactPage(env) {
               <div style="font-size: 1.5rem; margin-right: 1rem; color: var(--primary-color);">📍</div>
               <div>
                 <h3 style="font-weight: 600; margin-bottom: 0.25rem;">Address</h3>
-                <p style="color: var(--text-light);">123 Business Street<br>Industrial Zone<br>City, Country 12345</p>
+                <p id="contact-address" style="color: var(--text-light);">123 Business Street<br>Industrial Zone<br>City, Country 12345</p>
               </div>
             </div>
 
@@ -39,9 +51,8 @@ export async function contactPage(env) {
               <div style="font-size: 1.5rem; margin-right: 1rem; color: var(--primary-color);">📧</div>
               <div>
                 <h3 style="font-weight: 600; margin-bottom: 0.25rem;">Email</h3>
-                <p style="color: var(--text-light);">
-                  Sales: <a href="mailto:sales@example.com" style="color: var(--primary-color);">sales@example.com</a><br>
-                  Support: <a href="mailto:support@example.com" style="color: var(--primary-color);">support@example.com</a>
+                <p id="contact-email-info" style="color: var(--text-light);">
+                  <a id="contact-email-link" href="mailto:info@example.com" style="color: var(--primary-color);">info@example.com</a>
                 </p>
               </div>
             </div>
@@ -50,9 +61,8 @@ export async function contactPage(env) {
               <div style="font-size: 1.5rem; margin-right: 1rem; color: var(--primary-color);">📞</div>
               <div>
                 <h3 style="font-weight: 600; margin-bottom: 0.25rem;">Phone</h3>
-                <p style="color: var(--text-light);">
-                  Main: +1 234 567 8900<br>
-                  Fax: +1 234 567 8901
+                <p id="contact-phone-info" style="color: var(--text-light);">
+                  +1 234 567 8900
                 </p>
               </div>
             </div>
@@ -139,20 +149,6 @@ export async function contactPage(env) {
         </div>
       </div>
     </section>
-
-    <!-- Map Section (Placeholder) -->
-    <section style="background: var(--bg-light); padding: 3rem 0;">
-      <div class="container">
-        <h2 style="text-align: center; font-size: 1.75rem; margin-bottom: 2rem; color: var(--primary-color);">Find Us On Map</h2>
-        <div style="width: 100%; height: 400px; background: white; border-radius: 0.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; color: var(--text-light);">
-          <div style="text-align: center;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">🗺️</div>
-            <p>Map integration placeholder</p>
-            <p style="font-size: 0.9rem;">123 Business Street, Industrial Zone, City, Country</p>
-          </div>
-        </div>
-      </div>
-    </section>
   `;
 
   const scripts = `
@@ -199,6 +195,40 @@ export async function contactPage(env) {
         }
       });
 
+      // Load contact information from settings
+      async function loadContactInfo() {
+        try {
+          const response = await API.get('/settings');
+          if (response.success) {
+            const settings = response.data;
+
+            // Update address
+            const addressElem = document.getElementById('contact-address');
+            if (addressElem && settings.address) {
+              addressElem.innerHTML = settings.address.replace(/\\n/g, '<br>');
+            }
+
+            // Update email
+            const emailLink = document.getElementById('contact-email-link');
+            if (emailLink && settings.email) {
+              emailLink.href = \`mailto:\${settings.email}\`;
+              emailLink.textContent = settings.email;
+            }
+
+            // Update phone
+            const phoneInfo = document.getElementById('contact-phone-info');
+            if (phoneInfo && settings.phone) {
+              phoneInfo.textContent = settings.phone;
+            }
+          }
+        } catch (error) {
+          console.error('Error loading contact information:', error);
+        }
+      }
+
+      // Load contact info on page load
+      loadContactInfo();
+
       // Add responsive styles
       const style = document.createElement('style');
       style.textContent = \`
@@ -212,7 +242,13 @@ export async function contactPage(env) {
     </script>
   `;
 
-  const html = createLayout('Contact Us', content, scripts);
+  const html = createLayout(
+    `Contact Us - ${siteName}`,
+    content,
+    scripts,
+    `Get in touch with us - we'd love to hear from you! Contact ${siteName} for inquiries, support, and partnership opportunities.`,
+    false
+  );
 
   return new Response(html, {
     headers: {

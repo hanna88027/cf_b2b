@@ -14,18 +14,6 @@ export async function handlePageRequest(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
 
-  // Serve CSS files
-  if (path.startsWith('/css/')) {
-    const { handleStaticAssets } = await import('./static');
-    return handleStaticAssets(request, 'text/css');
-  }
-
-  // Serve JS files
-  if (path.startsWith('/js/')) {
-    const { handleStaticAssets } = await import('./static');
-    return handleStaticAssets(request, 'application/javascript');
-  }
-
   // Serve image files
   if (path.startsWith('/images/')) {
     const { handleStaticAssets } = await import('./static');

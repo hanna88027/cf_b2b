@@ -6,6 +6,18 @@
 import { createLayout } from './layout';
 
 export async function productsPage(env) {
+  // Load settings from KV for SEO
+  let siteName = 'B2B Product Exhibition';
+  try {
+    const settingsJson = await env.STATIC_ASSETS.get('website_settings');
+    if (settingsJson) {
+      const settings = JSON.parse(settingsJson);
+      siteName = settings.site_name || siteName;
+    }
+  } catch (error) {
+    console.error('Error loading settings for SEO:', error);
+  }
+
   const content = `
     <!-- Page Header -->
     <section class="hero" style="padding: 3rem 2rem;">
@@ -23,9 +35,7 @@ export async function productsPage(env) {
           <label style="font-weight: 500;">Category:</label>
           <select id="category-filter" class="form-input" style="max-width: 200px;">
             <option value="">All Categories</option>
-            <option value="Industrial">Industrial</option>
-            <option value="Technology">Technology</option>
-            <option value="Equipment">Equipment</option>
+            <!-- Categories will be loaded dynamically -->
           </select>
           <input
             type="text"
@@ -54,11 +64,26 @@ export async function productsPage(env) {
     <script>
       let allProducts = [];
 
+      // Load categories dynamically
+      function loadCategories(products) {
+        const categories = [...new Set(products.map(p => p.category).filter(c => c))];
+        const categoryFilter = document.getElementById('category-filter');
+
+        // Keep "All Categories" option and add dynamic categories
+        categories.forEach(category => {
+          const option = document.createElement('option');
+          option.value = category;
+          option.textContent = category;
+          categoryFilter.appendChild(option);
+        });
+      }
+
       // Load all products
       async function loadProducts() {
         try {
           const response = await API.get('/products');
           allProducts = response.data || [];
+          loadCategories(allProducts);
           displayProducts(allProducts);
         } catch (error) {
           console.error('Error loading products:', error);
@@ -81,7 +106,7 @@ export async function productsPage(env) {
         noResults.style.display = 'none';
         container.innerHTML = products.map(product => \`
           <div class="card">
-            <img src="\${product.image_url || '/images/placeholder.jpg'}" alt="\${product.name}" class="card-image">
+            <img src="\${product.image_url || 'https://via.placeholder.com/400x300?text=No+Image'}" alt="\${product.name}" class="card-image" onerror="this.src='https://via.placeholder.com/400x300?text=Image+Not+Found'">
             <div class="card-content">
               <div style="margin-bottom: 0.5rem;">
                 <span style="background: var(--primary-color); color: white; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem;">
@@ -127,10 +152,30 @@ export async function productsPage(env) {
 
       // Load products on page load
       loadProducts();
+
+      // Add styles for product card description - limit to 3 lines
+      const descriptionStyle = document.createElement('style');
+      descriptionStyle.textContent = \`
+        .card-description {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          line-height: 1.5;
+        }
+      \`;
+      document.head.appendChild(descriptionStyle);
     </script>
   `;
 
-  const html = createLayout('Products', content, scripts);
+  const html = createLayout(
+    `Products - ${siteName}`,
+    content,
+    scripts,
+    `Browse our comprehensive range of high-quality products - ${siteName}`,
+    false // Don't use title suffix, we already included site name
+  );
 
   return new Response(html, {
     headers: {
