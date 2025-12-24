@@ -6,7 +6,7 @@ compatibility_date = "2025-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "b2b_database"
-database_id = "8755429a-7eb4-4dac-8aa4-55e4b58b2f63"
+database_id = "f5eabe42-a3d6-407a-b513-be9a2bca25ac"
 
 # Environment variables
 [vars]
